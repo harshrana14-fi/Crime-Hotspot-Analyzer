@@ -179,6 +179,20 @@ tbody tr:last-child td{border-bottom:none}
 .form-section-title{font-family:var(--font-head);font-size:16px;font-weight:700;letter-spacing:1.5px;color:var(--text);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .form-actions{display:flex;gap:12px;margin-top:22px}
 
+.password-field{position:relative;display:flex;align-items:center}
+.password-field input{width:100%;padding-right:44px}
+.pw-toggle{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:32px;height:32px;
+  border:1px solid var(--border);border-radius:6px;
+  background:transparent;color:var(--text);
+  cursor:pointer;transition:var(--transition);
+  display:flex;align-items:center;justify-content:center;
+  line-height:1;
+}
+.pw-toggle:hover{border-color:var(--accent);box-shadow:var(--glow)}
+.pw-toggle:focus{outline:none;border-color:var(--accent);box-shadow:var(--glow)}
+
 .alerts-list{display:flex;flex-direction:column;gap:12px;margin-bottom:28px}
 .alert-item{
   background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;display:flex;align-items:flex-start;gap:16px;

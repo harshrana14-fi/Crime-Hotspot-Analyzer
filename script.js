@@ -105,6 +105,17 @@ async function connectDb(){
   }
 }
 
+function toggleDbPassword(){
+  const input = document.getElementById('db-pass');
+  const btn = document.querySelector('.pw-toggle');
+  if (!input || !btn) return;
+
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+  btn.setAttribute('title', isHidden ? 'Hide password' : 'Show password');
+}
+
 async function loadAllDataFromDb(){
   if (!state.connected) return;
   const [
