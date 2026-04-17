@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Crime Hotspot Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="./style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════ HEADER ══════════════════════════════ -->
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 32 32"><polygon points="16,2 30,28 2,28" stroke-linejoin="round"/><circle cx="16" cy="20" r="2.5"/><line x1="16" y1="12" x2="16" y2="17"/></svg>
+    <span>CRIME<em>SPOT</em> <span style="font-size:13px;font-weight:300;color:var(--text-dim)">ANALYSER</span></span>
+  </div>
+  <div class="header-status">
+    <div class="live-badge"><div class="live-dot"></div><span id="conn-label">DB DISCONNECTED</span></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+  <div class="header-actions">
+    <button onclick="openDbModal()">⚙ Connect DB</button>
+    <button class="active">🔐 Admin</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════ SIDEBAR ══════════════════════════════ -->
+<aside>
+  <div class="nav-section">Analysis</div>
+  <div class="nav-item active" onclick="showSection('dashboard',this)"><span class="icon">📊</span><span>Dashboard</span></div>
+  <div class="nav-item" onclick="showSection('hotspots',this)"><span class="icon">🗺️</span><span>Hotspot Map</span></div>
+  <div class="nav-item" onclick="showSection('analytics',this)"><span class="icon">📈</span><span>Analytics</span></div>
+
+  <div class="nav-section">Records</div>
+  <div class="nav-item" onclick="showSection('incidents',this)"><span class="icon">📋</span><span>Incidents</span></div>
+  <div class="nav-item" onclick="showSection('add-incident',this)"><span class="icon">➕</span><span>Add Incident</span></div>
+  <div class="nav-item" onclick="showSection('suspects',this)"><span class="icon">🔎</span><span>Suspects</span></div>
+
+  <div class="nav-section">Operations</div>
+  <div class="nav-item" onclick="showSection('alerts',this)"><span class="icon">🚨</span><span>Alerts</span><span class="nav-badge" id="alert-badge">4</span></div>
+  <div class="nav-item" onclick="showSection('patrol',this)"><span class="icon">🚔</span><span>Patrols</span></div>
+  <div class="nav-section">Database</div>
+  <div class="nav-item" onclick="showSection('query',this)"><span class="icon">💾</span><span>SQL Query</span></div>
+  <div class="nav-item" onclick="showSection('schema',this)"><span class="icon">🗄️</span><span>DB Schema</span></div>
+</aside>
+
+<!-- ══════════════════════════════ MAIN ══════════════════════════════ -->
+<main>
+
+  <!-- ─── DASHBOARD ─── -->
+  <div class="section active" id="section-dashboard">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Command <span>Dashboard</span></div>
+        <div class="page-subtitle">// Real-time overview — all regions</div>
+      </div>
+      <div class="filter-bar">
+        <select id="dash-city"><option>All Cities</option><option>Delhi</option><option>Mumbai</option><option>Kolkata</option><option>Chennai</option><option>Bengaluru</option></select>
+        <select id="dash-period"><option>Last 30 Days</option><option>Last 7 Days</option><option>This Year</option></select>
+        <button class="btn" onclick="refreshDashboard()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card red"><div class="stat-label">Total Incidents</div><div class="stat-value" id="s-total">—</div><div class="stat-delta up" id="s-total-d">Loading…</div></div>
+      <div class="stat-card"><div class="stat-label">Active Hotspots</div><div class="stat-value" id="s-hotspot">—</div><div class="stat-delta" id="s-hotspot-d"></div></div>
+      <div class="stat-card gold"><div class="stat-label">Open Alerts</div><div class="stat-value" id="s-alerts">—</div><div class="stat-delta up" id="s-alerts-d"></div></div>
+      <div class="stat-card purple"><div class="stat-label">Solve Rate</div><div class="stat-value" id="s-solve">—</div><div class="stat-delta down" id="s-solve-d"></div></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-panel"><div class="chart-title"><div class="dot"></div>Crimes by Category</div><canvas id="catChart"></canvas></div>
+      <div class="chart-panel"><div class="chart-title"><div class="dot" style="background:var(--accent2)"></div>Incident Status</div><canvas id="statusChart"></canvas></div>
+      <div class="chart-panel wide"><div class="chart-title"><div class="dot" style="background:var(--accent3)"></div>Monthly Trend</div><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <div class="table-panel">
+      <div class="table-header"><div class="table-title">🔥 Top Risk Hotspots</div></div>
+      <div style="overflow-x:auto">
+      <table id="hotspot-table">
+        <thead><tr><th>Area</th><th>City</th><th>Total Crimes</th><th>Risk Score</th><th>Risk Level</th><th>Dominant Crime</th><th>Trend</th></tr></thead>
+        <tbody id="hotspot-tbody"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── HOTSPOT MAP ─── -->
+  <div class="section" id="section-hotspots">
+    <div class="page-header">
+      <div><div class="page-title">Hotspot <span>Map</span></div><div class="page-subtitle">// Geographic distribution of crime clusters</div></div>
+      <div class="filter-bar">
+        <select><option>All Crime Types</option><option>Theft</option><option>Assault</option><option>Robbery</option></select>
+        <select><option>All Risk Levels</option><option>Critical</option><option>High</option><option>Moderate</option><option>Low</option></select>
+      </div>
+    </div>
+    <div class="map-container">
+      <div class="map-view" id="mapView">
+        <div class="map-dots" id="mapDots"></div>
+        <div class="map-note">
+          <strong>📍 Interactive Hotspot Map</strong>
+          Connect a mapping library (Leaflet.js / Google Maps) and provide your API key.<br>
+          Dots below represent sample hotspot locations from the database.
+        </div>
+      </div>
+    </div>
+
+    <div class="table-panel">
+      <div class="table-header"><div class="table-title">📍 All Hotspot Locations</div></div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Area</th><th>City</th><th>District</th><th>Lat / Lon</th><th>Zone</th><th>Incidents</th><th>Risk</th></tr></thead>
+        <tbody id="map-table-body"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ANALYTICS ─── -->
+  <div class="section" id="section-analytics">
+    <div class="page-header">
+      <div><div class="page-title">Crime <span>Analytics</span></div><div class="page-subtitle">// Trend analysis and pattern recognition</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-panel"><div class="chart-title"><div class="dot"></div>Day-of-Week Heatmap</div><canvas id="dowChart"></canvas></div>
+      <div class="chart-panel"><div class="chart-title"><div class="dot" style="background:var(--purple)"></div>Severity Distribution</div><canvas id="sevChart"></canvas></div>
+      <div class="chart-panel wide"><div class="chart-title"><div class="dot" style="background:var(--accent3)"></div>City-wise Crime Breakdown</div><canvas id="cityChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ─── INCIDENTS ─── -->
+  <div class="section" id="section-incidents">
+    <div class="page-header">
+      <div><div class="page-title">Incident <span>Records</span></div><div class="page-subtitle">// FIR database — all logged cases</div></div>
+      <div class="filter-bar">
+        <input type="text" id="inc-search" placeholder="Search FIR / area…" oninput="filterIncidents()"/>
+        <select id="inc-status" onchange="filterIncidents()">
+          <option value="">All Status</option><option>reported</option><option>under_investigation</option><option>solved</option><option>closed</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-panel">
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>FIR No.</th><th>Date</th><th>Location</th><th>Category</th><th>Victims</th><th>Suspects</th><th>Status</th><th>Severity</th></tr></thead>
+        <tbody id="inc-tbody"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ADD INCIDENT ─── -->
+  <div class="section" id="section-add-incident">
+    <div class="page-header">
+      <div><div class="page-title">Log <span>Incident</span></div><div class="page-subtitle">// Register a new FIR / crime report</div></div>
+    </div>
+    <div class="form-panel">
+      <div class="form-section-title">📋 Incident Details</div>
+      <div class="form-grid">
+        <div class="form-group"><label>FIR Number</label><input id="f-fir" placeholder="FIR/2024/XXX" /></div>
+        <div class="form-group"><label>Incident Date</label><input id="f-date" type="date" /></div>
+        <div class="form-group"><label>Incident Time</label><input id="f-time" type="time" /></div>
+        <div class="form-group"><label>Crime Category</label>
+          <select id="f-cat">
+            <option value="">Select…</option>
+            <option value="1">Theft</option><option value="2">Assault</option><option value="3">Burglary</option>
+            <option value="4">Robbery</option><option value="5">Homicide</option><option value="6">Fraud</option>
+            <option value="7">Drug Offence</option><option value="8">Vandalism</option><option value="9">Sexual Offence</option><option value="10">Cybercrime</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Location Area</label>
+          <select id="f-loc">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="f-status">
+            <option value="reported">Reported</option><option value="under_investigation">Under Investigation</option>
+            <option value="solved">Solved</option><option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Victim Count</label><input id="f-victims" type="number" min="0" value="1"/></div>
+        <div class="form-group"><label>Suspect Count</label><input id="f-suspects" type="number" min="0" value="0"/></div>
+        <div class="form-group full"><label>Description</label><textarea id="f-desc" placeholder="Describe the incident…"></textarea></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="submitIncident()">💾 Save Incident</button>
+        <button class="btn secondary" onclick="clearForm()">✕ Clear</button>
+      </div>
+      <div id="form-msg" style="margin-top:14px;font-family:var(--font-mono);font-size:12px"></div>
+    </div>
+  </div>
+
+  <!-- ─── SUSPECTS ─── -->
+  <div class="section" id="section-suspects">
+    <div class="page-header">
+      <div><div class="page-title">Suspect <span>Registry</span></div><div class="page-subtitle">// Known and logged suspects</div></div>
+    </div>
+    <div class="table-panel">
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Incident</th><th>Nationality</th><th>Arrested</th></tr></thead>
+        <tbody id="sus-tbody"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ALERTS ─── -->
+  <div class="section" id="section-alerts">
+    <div class="page-header">
+      <div><div class="page-title">Active <span>Alerts</span></div><div class="page-subtitle">// System-generated and manual warnings</div></div>
+      <button class="btn" onclick="resolveAll()">✓ Resolve All</button>
+    </div>
+    <div class="alerts-list" id="alerts-list"></div>
+  </div>
+
+  <!-- ─── PATROL ─── -->
+  <div class="section" id="section-patrol">
+    <div class="page-header">
+      <div><div class="page-title">Patrol <span>Logs</span></div><div class="page-subtitle">// Officer deployment tracking</div></div>
+    </div>
+    <div class="form-panel">
+      <div class="form-section-title">🚔 Log New Patrol</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Officer Badge No</label><input id="p-badge" placeholder="BADGE-001"/></div>
+        <div class="form-group"><label>Location</label>
+          <select id="p-loc">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Patrol Start</label><input id="p-start" type="datetime-local"/></div>
+        <div class="form-group"><label>Patrol End</label><input id="p-end" type="datetime-local"/></div>
+        <div class="form-group full"><label>Observations</label><textarea id="p-obs" placeholder="Notes from the patrol…"></textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn" onclick="submitPatrol()">📝 Log Patrol</button></div>
+      <div id="patrol-msg" style="margin-top:14px;font-family:var(--font-mono);font-size:12px"></div>
+    </div>
+    <div class="table-panel">
+      <div class="table-header"><div class="table-title">Recent Patrols</div></div>
+      <div style="overflow-x:auto">
+      <table><thead><tr><th>#</th><th>Officer</th><th>Location</th><th>Start</th><th>End</th><th>Notes</th></tr></thead>
+      <tbody id="patrol-tbody"><tr><td colspan="6" style="color:var(--text-dim);text-align:center;padding:24px">No patrol logs yet</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ─── SQL QUERY ─── -->
+  <div class="section" id="section-query">
+    <div class="page-header">
+      <div><div class="page-title">SQL <span>Terminal</span></div><div class="page-subtitle">// Execute queries against crime_hotspot_db</div></div>
+    </div>
+    <div class="form-panel">
+      <div class="form-section-title">⌨ Query Editor</div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn secondary" onclick="setQuery('SELECT * FROM v_top_hotspots LIMIT 10;')">Top Hotspots</button>
+        <button class="btn secondary" onclick="setQuery('SELECT * FROM v_monthly_trend;')">Monthly Trend</button>
+        <button class="btn secondary" onclick="setQuery('SELECT * FROM crime_incidents ORDER BY incident_date DESC LIMIT 20;')">Recent Incidents</button>
+        <button class="btn secondary" onclick="setQuery('SELECT * FROM alerts WHERE is_resolved = FALSE;')">Open Alerts</button>
+        <button class="btn secondary" onclick="setQuery('CALL sp_update_hotspot(1, CURDATE());')">Run Hotspot SP</button>
+      </div>
+      <div class="form-group">
+        <textarea id="sql-input" style="min-height:110px;font-family:var(--font-mono);font-size:13px" placeholder="SELECT * FROM crime_incidents LIMIT 10;"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="runQuery()">▶ Execute</button>
+        <button class="btn secondary" onclick="clearTerminal()">🗑 Clear</button>
+      </div>
+    </div>
+    <div class="terminal" id="terminal">
+      <span class="terminal-output">// Connect to the database first, then run queries here.<br>// This panel simulates the MariaDB query interface.<br></span>
+    </div>
+  </div>
+
+  <!-- ─── SCHEMA ─── -->
+  <div class="section" id="section-schema">
+    <div class="page-header">
+      <div><div class="page-title">Database <span>Schema</span></div><div class="page-subtitle">// crime_hotspot_db — table structure</div></div>
+    </div>
+    <div id="schema-panels"></div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════ DB MODAL ══════════════════════════════ -->
+<div class="overlay" id="db-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDbModal()">✕</button>
+    <div class="modal-title">Connect Database</div>
+    <div class="modal-sub">// MariaDB / MySQL connection settings</div>
+    <div class="form-grid" style="gap:14px">
+      <div class="form-group"><label>Host</label><input id="db-host" value="localhost"/></div>
+      <div class="form-group"><label>Port</label><input id="db-port" value="3306"/></div>
+      <div class="form-group"><label>Database</label><input id="db-name" value="crime_hotspot_db"/></div>
+      <div class="form-group"><label>Username</label><input id="db-user" value="root"/></div>
+      <div class="form-group full"><label>Password</label><input id="db-pass" type="password" placeholder="••••••••"/></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="connectDb()">⚡ Connect</button>
+      <button class="btn secondary" onclick="closeDbModal()">Cancel</button>
+    </div>
+    <div class="conn-status"><div class="conn-dot" id="conn-dot"></div><span id="conn-text">Not connected</span></div>
+  </div>
+</div>
+
+<script src="./script.js"></script>
+</body>
+</html>
