@@ -95,3 +95,10 @@ Open in browser:
   - Check host/port/user/password/database
   - Ensure `crime_hotspot_db` exists (SQL script executed successfully)
 
+## ScreenShots:
+<img width="1919" height="863" alt="image" src="https://github.com/user-attachments/assets/540d7120-fc8e-4b15-80bc-cbf8d993ac13" />
+<img width="1919" height="855" alt="image" src="https://github.com/user-attachments/assets/5901c7ff-1d19-4c68-ac62-1d380c0c93f5" />
+<img width="1919" height="851" alt="image" src="https://github.com/user-attachments/assets/bf04cc40-d82f-4f24-9aa7-42a720daca99" />
+
+  
+
