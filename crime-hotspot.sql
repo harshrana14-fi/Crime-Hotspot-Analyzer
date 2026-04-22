@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS officers (
   officer_id    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   badge_no      VARCHAR(20)  NOT NULL UNIQUE,
   full_name     VARCHAR(150) NOT NULL,
-  rank          VARCHAR(80)  NOT NULL,
+  `rank`        VARCHAR(80)  NOT NULL,
   department    VARCHAR(120),
   email         VARCHAR(180) UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS officers (
 ) ENGINE=InnoDB;
 
 -- Demo admin (password: Admin@1234  — store bcrypt hash in production)
-INSERT INTO officers (badge_no, full_name, rank, department, email, password_hash, role)
+INSERT INTO officers (badge_no, full_name, `rank`, department, email, password_hash, role)
 VALUES ('ADMIN001', 'System Admin', 'Inspector', 'Cyber & Analytics', 'admin@crimeanalyser.gov',
         '$2b$12$demoHashPlaceholderForDev', 'admin');
 
@@ -205,6 +205,16 @@ VALUES
   ('FIR/2024/008', 8, 10,'2024-01-20', '09:00:00', 3, 1, 'Corporate espionage via phishing', 'under_investigation', 2),
   ('FIR/2024/009', 1, 2, '2024-02-01', '23:50:00', 1, 1, 'Assault near CP parking area', 'reported', 3),
   ('FIR/2024/010', 2, 1, '2024-02-03', '13:10:00', 1, 2, 'Wallet stolen in crowded market', 'solved', 2);
+
+-- -----------------------------------------------------------
+-- SAMPLE DATA — Suspects
+-- -----------------------------------------------------------
+INSERT INTO suspects (incident_id, name, age, gender, nationality, description, arrested, arrest_date) VALUES
+  (1, 'Rahul Verma', 24, 'male',   'Indian',  'Identified via CCTV near metro gate', TRUE,  '2024-01-08'),
+  (2, 'Unknown',     28, 'male',   'Indian',  'Involved in late-night fight; fled scene', FALSE, NULL),
+  (4, 'Imran Khan',  31, 'male',   'Indian',  'Knife-point snatching gang member', FALSE, NULL),
+  (5, 'Neha Gupta',  29, 'female', 'Indian',  'Suspected mastermind of investment scam', FALSE, NULL),
+  (6, 'Unknown',     22, 'unknown','Unknown', 'Drug peddling suspect apprehended nearby', TRUE, '2024-01-16');
 
 -- -----------------------------------------------------------
 -- SAMPLE DATA — Hotspot Analysis

@@ -157,28 +157,30 @@ async function loadAllDataFromDb(){
 }
 
 function refreshDashboard(summary){
-  const inc = state.data.incidents;
-  const solved = summary ? summary.solveRate : (inc.length ? Math.round((inc.filter(i => i.status === 'solved').length / inc.length) * 100) : 0);
-  document.getElementById('s-total').textContent = summary ? summary.totalIncidents : inc.length;
+  const { incidents, hotspots, alerts } = getDashboardFilteredData();
+  const solved = summary ? summary.solveRate : (incidents.length ? Math.round((incidents.filter(i => i.status === 'solved').length / incidents.length) * 100) : 0);
+  document.getElementById('s-total').textContent = summary ? summary.totalIncidents : incidents.length;
   document.getElementById('s-total-d').textContent = 'Live from DB';
-  document.getElementById('s-hotspot').textContent = summary ? summary.activeHotspots : state.data.hotspots.filter(h => h.level === 'critical' || h.level === 'high').length;
+  document.getElementById('s-hotspot').textContent = summary ? summary.activeHotspots : hotspots.filter(h => h.level === 'critical' || h.level === 'high').length;
   document.getElementById('s-hotspot-d').textContent = 'High/Critical';
-  document.getElementById('s-alerts').textContent = summary ? summary.openAlerts : state.data.alerts.filter(a => !a.resolved).length;
+  document.getElementById('s-alerts').textContent = summary ? summary.openAlerts : alerts.filter(a => !a.resolved).length;
   document.getElementById('s-alerts-d').textContent = 'Open alerts';
   document.getElementById('s-solve').textContent = `${solved}%`;
   document.getElementById('s-solve-d').textContent = 'From incidents table';
-  renderHotspotTable();
-  renderCharts();
+  renderHotspotTable(hotspots);
+  renderCharts(incidents, hotspots);
 }
 
-function renderHotspotTable(){
+function renderHotspotTable(hotspots = state.data.hotspots){
   const tb = document.getElementById('hotspot-tbody');
-  tb.innerHTML = state.data.hotspots.map(h => `
+  tb.innerHTML = hotspots.map(h => `
     <tr>
       <td>${h.area}</td>
       <td>${h.city}</td>
       <td><span style="font-family:var(--font-mono);color:var(--accent)">${h.crimes}</span></td>
-      <td><span style="font-family:var(--font-mono)">${h.score.toFixed(1)}</span></td>
+      <td><span style="font-family:var(--font-mono)">${
+        Number.isFinite(Number(h.score)) ? Number(h.score).toFixed(1) : '—'
+      }</span></td>
       <td><span class="badge ${h.level}">${h.level.toUpperCase()}</span></td>
       <td>${h.crime}</td>
       <td class="trend-${h.trend === 'increasing' ? 'up' : h.trend === 'decreasing' ? 'down' : 'stable'}">
@@ -187,12 +189,12 @@ function renderHotspotTable(){
     </tr>`).join('');
 }
 
-function renderCharts(){
+function renderCharts(incidents = state.data.incidents, hotspots = state.data.hotspots){
   const categoryMap = new Map();
   const statusMap = new Map();
   const monthlyMap = new Map();
 
-  state.data.incidents.forEach(inc => {
+  incidents.forEach(inc => {
     categoryMap.set(inc.cat, (categoryMap.get(inc.cat) || 0) + 1);
     const statusLabel = inc.status.replace('_', ' ');
     statusMap.set(statusLabel, (statusMap.get(statusLabel) || 0) + 1);
@@ -244,10 +246,10 @@ function renderCharts(){
     if (state.charts.city) state.charts.city.destroy();
 
     const severityCounts = [1, 2, 3, 4, 5].map(s =>
-      state.data.incidents.filter(i => Number(i.severity) === s).length
+      incidents.filter(i => Number(i.severity) === s).length
     );
     const cityMap = new Map();
-    state.data.hotspots.forEach(h => {
+    hotspots.forEach(h => {
       cityMap.set(h.city, (cityMap.get(h.city) || 0) + Number(h.crimes || 0));
     });
     const cityLabels = Array.from(cityMap.keys());
@@ -329,7 +331,12 @@ function filterIncidents(){
 }
 
 function renderSuspects(){
-  document.getElementById('sus-tbody').innerHTML = state.data.suspects.map(s => `
+  const tb = document.getElementById('sus-tbody');
+  if (!state.data.suspects.length){
+    tb.innerHTML = '<tr><td colspan="7" style="color:var(--text-dim);text-align:center;padding:24px">No suspects found (insert some sample suspects, or add suspects for incidents)</td></tr>';
+    return;
+  }
+  tb.innerHTML = state.data.suspects.map(s => `
     <tr>
       <td style="font-family:var(--font-mono);color:var(--text-dim)">${s.id}</td>
       <td>${s.name}</td><td>${s.age}</td><td>${s.gender}</td>
@@ -337,6 +344,41 @@ function renderSuspects(){
       <td>${s.nat}</td>
       <td><span class="badge ${s.arrested ? 'solved' : 'reported'}">${s.arrested ? 'YES' : 'NO'}</span></td>
     </tr>`).join('');
+}
+
+function getDashboardFilters(){
+  const cityEl = document.getElementById('dash-city');
+  const periodEl = document.getElementById('dash-period');
+  const city = cityEl ? cityEl.value : 'All Cities';
+  const period = periodEl ? periodEl.value : 'Last 30 Days';
+  return { city, period };
+}
+
+function getDashboardFilteredData(){
+  const { city, period } = getDashboardFilters();
+  const isAllCities = !city || city === 'All Cities';
+
+  const now = new Date();
+  let fromDate = null;
+  if (period === 'Last 7 Days') {
+    fromDate = new Date(now);
+    fromDate.setDate(fromDate.getDate() - 7);
+  } else if (period === 'Last 30 Days') {
+    fromDate = new Date(now);
+    fromDate.setDate(fromDate.getDate() - 30);
+  } else if (period === 'This Year') {
+    fromDate = new Date(now.getFullYear(), 0, 1);
+  }
+
+  const incidents = state.data.incidents.filter(i => {
+    const cityOk = isAllCities || (i.city && i.city.toLowerCase() === city.toLowerCase());
+    const dateOk = !fromDate || (i.date && new Date(i.date) >= fromDate);
+    return cityOk && dateOk;
+  });
+
+  const hotspots = state.data.hotspots.filter(h => isAllCities || (h.city && h.city.toLowerCase() === city.toLowerCase()));
+  const alerts = state.data.alerts.filter(a => isAllCities || (a.loc && a.loc.toLowerCase().includes(city.toLowerCase())));
+  return { incidents, hotspots, alerts };
 }
 
 const alertIcons = {critical:'🚨', high:'⚠️', medium:'📢', low:'ℹ️'};
@@ -546,8 +588,15 @@ async function renderSchema(){
 
 document.addEventListener('DOMContentLoaded', () => {
   renderPatrols();
+  const dashCity = document.getElementById('dash-city');
+  const dashPeriod = document.getElementById('dash-period');
+  if (dashCity) dashCity.addEventListener('change', () => refreshDashboard());
+  if (dashPeriod) dashPeriod.addEventListener('change', () => refreshDashboard());
   document.querySelector('[onclick*="analytics"]').addEventListener('click', () => {
-    setTimeout(renderCharts, 100);
+    setTimeout(() => {
+      const { incidents, hotspots } = getDashboardFilteredData();
+      renderCharts(incidents, hotspots);
+    }, 100);
   });
 });
 

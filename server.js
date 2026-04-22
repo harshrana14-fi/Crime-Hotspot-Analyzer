@@ -48,7 +48,8 @@ app.post('/api/connect', async (req, res) => {
       password: password || '',
       database,
       waitForConnections: true,
-      connectionLimit: 8
+      connectionLimit: 8,
+      decimalNumbers: true
     });
     await pool.query('SELECT 1');
 
@@ -99,6 +100,7 @@ app.get('/api/incidents', async (_req, res) => {
       `SELECT ci.fir_number AS id,
               DATE_FORMAT(ci.incident_date, '%Y-%m-%d') AS date,
               l.area_name AS loc,
+              l.city AS city,
               cc.category_name AS cat,
               ci.victim_count AS victims,
               ci.suspect_count AS suspects,
